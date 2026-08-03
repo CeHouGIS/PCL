@@ -47,6 +47,7 @@ python3 scripts/run_validation.py
 Nature 风格版本可单独重新生成：
 
 ```bash
+sudo apt install fonts-liberation2  # Arial 度量兼容的开源字体
 python3 scripts/plot_nature_style.py
 ```
 

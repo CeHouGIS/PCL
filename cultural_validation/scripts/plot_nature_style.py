@@ -7,15 +7,28 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib import font_manager
 from scipy import stats
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output"
 
+# Register the open, Arial-compatible font explicitly. Matplotlib can retain a
+# stale system-font cache in containers, so relying on family-name discovery is
+# not sufficiently reproducible for publication output.
+LIBERATION_DIR = Path("/usr/share/fonts/truetype/liberation2")
+liberation_fonts = sorted(LIBERATION_DIR.glob("LiberationSans-*.ttf"))
+if not liberation_fonts:
+    raise RuntimeError("Liberation Sans is required (Debian/Ubuntu: apt install fonts-liberation2).")
+for font_file in liberation_fonts:
+    font_manager.fontManager.addfont(font_file)
+
 mpl.rcParams.update({
     "font.family": "sans-serif",
-    "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+    # Liberation Sans is metrically compatible with Arial and is available
+    # under an open font licence, making it a reproducible journal-safe proxy.
+    "font.sans-serif": ["Liberation Sans"],
     "font.size": 7,
     "axes.labelsize": 8,
     "axes.linewidth": 0.7,
@@ -82,12 +95,14 @@ def main():
             zorder=4,
         )
 
-        ax.text(-0.14, 1.04, chr(97 + panel), transform=ax.transAxes,
-                fontsize=9, fontweight="bold", va="bottom")
-        ax.text(0.04, 0.95, f"K = {k}", transform=ax.transAxes,
-                fontsize=8, fontweight="bold", va="top")
-        ax.text(0.04, 0.84, f"Spearman $r_s$ = {rho:.3f}\n$n$ = {len(d):,} pairs",
-                transform=ax.transAxes, fontsize=7, va="top", linespacing=1.25)
+        # Keep every annotation outside the plotting field so no observation
+        # is obscured. This header remains legible after double-column scaling.
+        ax.text(-0.14, 1.055, chr(97 + panel), transform=ax.transAxes,
+                fontsize=9, fontweight="bold", va="bottom", clip_on=False)
+        ax.set_title(
+            f"K = {k}    $r_s$ = {rho:.3f}    $n$ = {len(d):,}",
+            loc="left", fontsize=7.5, fontweight="normal", pad=8,
+        )
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xlim(0.28, 0.42)
@@ -97,7 +112,7 @@ def main():
         ax.set_xlabel("Cultural distance")
 
     axes[0].set_ylabel("Morphological similarity (CI)")
-    fig.subplots_adjust(left=0.085, right=0.92, bottom=0.22, top=0.94, wspace=0.14)
+    fig.subplots_adjust(left=0.085, right=0.92, bottom=0.22, top=0.88, wspace=0.14)
     cax = fig.add_axes([0.94, 0.25, 0.012, 0.62])
     cb = fig.colorbar(last, cax=cax, ticks=[1, 20, 40, 60])
     cb.set_label("City-pair count", labelpad=3)
