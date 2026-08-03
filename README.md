@@ -16,6 +16,6 @@ It contains three prototype resolutions (`K=200, 500, 1000`), city label rasters
 
 See [`cultural_validation/README.md`](cultural_validation/README.md) for data sources, methodology, reproduction instructions, and interpretation limits. The main result is stable across all three prototype resolutions: larger independently measured WVS/EVS cultural distance is associated with lower satellite-derived Covered Index.
 
-![CI versus WVS/EVS cultural distance](cultural_validation/output/ci_vs_cultural_distance.png)
+![CI versus WVS/EVS cultural distance](cultural_validation/output/ci_vs_cultural_distance_nature.png)
 
 External source files are not redistributed in this repository. Download them from their original providers as documented before rerunning the script. Derived analysis tables and results are included under `cultural_validation/output/`.

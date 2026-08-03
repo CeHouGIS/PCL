@@ -36,10 +36,19 @@ python3 scripts/run_validation.py
 
 - `output/RESULTS.md`：主要数值结果。
 - `output/ci_vs_cultural_distance.png`：三种聚类尺度的可视化。
+- `output/ci_vs_cultural_distance_nature.pdf`：Nature 风格的可编辑双栏图。
+- `output/ci_vs_cultural_distance_nature.png`：Nature 风格的 600 dpi PNG。
+- `output/ci_vs_cultural_distance_nature.tif`：Nature 风格的 600 dpi TIFF。
 - `output/analysis_dataset_all_pairs.csv`：完整合并数据。
 - `output/regression_results.csv`：模型系数。
 - `output/validation_results.json`：机器可读汇总。
 - `output/city_country_mapping.csv`：城市—国家映射审计表。
+
+Nature 风格版本可单独重新生成：
+
+```bash
+python3 scripts/plot_nature_style.py
+```
 
 ## 解释边界
 
