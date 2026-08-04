@@ -2,6 +2,7 @@
 """Create a compact Nature-style figure for the cultural validation."""
 
 from pathlib import Path
+import json
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -30,7 +31,10 @@ mpl.rcParams.update({
     # under an open font licence, making it a reproducible journal-safe proxy.
     "font.sans-serif": ["Liberation Sans"],
     "font.size": 7,
+    "font.weight": "bold",
     "axes.labelsize": 8,
+    "axes.labelweight": "bold",
+    "axes.titleweight": "bold",
     "axes.linewidth": 0.7,
     "xtick.labelsize": 7,
     "ytick.labelsize": 7,
@@ -47,6 +51,8 @@ mpl.rcParams.update({
 
 def main():
     data = pd.read_csv(OUT / "analysis_dataset_all_pairs.csv")
+    with open(OUT / "validation_results.json", encoding="utf-8") as stream:
+        validation = json.load(stream)
     fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.35), sharex=True, sharey=True)
     cmap = mpl.colormaps["cividis"].copy()
     cmap.set_under("white")
@@ -57,6 +63,7 @@ def main():
             subset=["ci_symmetric", "cultdist", "dist"]
         )
         rho, _ = stats.spearmanr(d.cultdist, d.ci_symmetric)
+        perm_p = validation["scales"][str(k)]["country_label_permutation_p"]
         last = ax.hexbin(
             d.cultdist,
             d.ci_symmetric,
@@ -100,8 +107,8 @@ def main():
         ax.text(-0.14, 1.055, chr(97 + panel), transform=ax.transAxes,
                 fontsize=9, fontweight="bold", va="bottom", clip_on=False)
         ax.set_title(
-            f"K = {k}    $r_s$ = {rho:.3f}    $n$ = {len(d):,}",
-            loc="left", fontsize=7.5, fontweight="normal", pad=8,
+            f"K = {k}    $r_s$ = {rho:.3f}    $P$ = {perm_p:.3f}",
+            loc="left", fontsize=7.5, fontweight="bold", pad=8,
         )
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -110,12 +117,17 @@ def main():
         ax.set_xticks([0.28, 0.32, 0.36, 0.40])
         ax.set_yticks([0.60, 0.70, 0.80, 0.90])
         ax.set_xlabel("Cultural distance")
+        for tick in ax.get_xticklabels() + ax.get_yticklabels():
+            tick.set_fontweight("bold")
 
     axes[0].set_ylabel("Morphological similarity (CI)")
     fig.subplots_adjust(left=0.085, right=0.92, bottom=0.22, top=0.88, wspace=0.14)
     cax = fig.add_axes([0.94, 0.25, 0.012, 0.62])
     cb = fig.colorbar(last, cax=cax, ticks=[1, 20, 40, 60])
     cb.set_label("City-pair count", labelpad=3)
+    cb.ax.yaxis.label.set_fontweight("bold")
+    for tick in cb.ax.get_yticklabels():
+        tick.set_fontweight("bold")
     cb.outline.set_linewidth(0.6)
 
     for suffix, dpi in (("pdf", None), ("png", 600), ("tif", 600)):
