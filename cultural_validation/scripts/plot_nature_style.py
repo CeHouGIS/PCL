@@ -77,30 +77,31 @@ def main():
             rasterized=True,
         )
 
-        # Display binned means and 95% confidence intervals to show the trend
-        # without treating every dyad as statistically independent.
-        edges = np.quantile(d.cultdist, np.linspace(0, 1, 9))
-        edges = np.unique(edges)
-        mids, means, cis = [], [], []
-        for lo, hi in zip(edges[:-1], edges[1:]):
-            subset = d[(d.cultdist >= lo) & (d.cultdist <= hi)].ci_symmetric
-            if len(subset) < 2:
-                continue
-            mids.append((lo + hi) / 2)
-            means.append(subset.mean())
-            cis.append(1.96 * subset.std(ddof=1) / np.sqrt(len(subset)))
-        ax.errorbar(
-            mids,
-            means,
-            yerr=cis,
+        # Straight ordinary-least-squares trend with a 95% confidence band for
+        # the fitted mean. Dependence-aware inference is reported separately
+        # in the panel header using the country-label permutation P value.
+        x = d.cultdist.to_numpy(dtype=float)
+        y = d.ci_symmetric.to_numpy(dtype=float)
+        design = np.column_stack([np.ones(len(x)), x])
+        beta = np.linalg.lstsq(design, y, rcond=None)[0]
+        x_grid = np.linspace(x.min(), x.max(), 200)
+        grid_design = np.column_stack([np.ones(len(x_grid)), x_grid])
+        y_fit = grid_design @ beta
+        residual = y - design @ beta
+        sigma2 = residual @ residual / (len(x) - design.shape[1])
+        covariance = sigma2 * np.linalg.inv(design.T @ design)
+        mean_se = np.sqrt(np.einsum("ij,jk,ik->i", grid_design, covariance, grid_design))
+        critical = stats.t.ppf(0.975, df=len(x) - design.shape[1])
+        ax.fill_between(
+            x_grid,
+            y_fit - critical * mean_se,
+            y_fit + critical * mean_se,
             color="#C44E52",
-            marker="o",
-            markersize=2.8,
-            markeredgewidth=0,
-            linewidth=1.0,
-            capsize=1.5,
-            zorder=4,
+            alpha=0.20,
+            linewidth=0,
+            zorder=3,
         )
+        ax.plot(x_grid, y_fit, color="#C44E52", linewidth=1.3, zorder=4)
 
         # Keep every annotation outside the plotting field so no observation
         # is obscured. This header remains legible after double-column scaling.
