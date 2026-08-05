@@ -57,6 +57,14 @@ python3 scripts/plot_nature_style.py
 python3 scripts/run_additional_cross_validation.py
 ```
 
+按主图的 Nature 风格绘制每个外部文化指标的 K=200/500/1000 三联图：
+
+```bash
+python3 scripts/plot_additional_nature_style.py
+```
+
+输出文件以 `output/additional_*_nature` 开头，每个指标提供 PDF、600 dpi PNG 和 600 dpi TIFF。
+
 ## 解释边界
 
 文化距离是国家层级指标，同一国家内的城市文化差异无法识别，因此主分析排除了同国城市对。城市对共享城市与国家，普通逐行显著性会夸大有效样本量；结论以国家标签置换检验为主。结果支持外部关联效度，不单独识别文化影响城市形态的因果方向。
