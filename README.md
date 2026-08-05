@@ -19,3 +19,5 @@ See [`cultural_validation/README.md`](cultural_validation/README.md) for data so
 ![CI versus WVS/EVS cultural distance](cultural_validation/output/ci_vs_cultural_distance_nature.png)
 
 External source files are not redistributed in this repository. Download them from their original providers as documented before rerunning the script. Derived analysis tables and results are included under `cultural_validation/output/`.
+
+Additional cross-validation against Hofstede dimensions, EcoCultural psychological domains, and CEPII language relations is documented in [`cultural_validation/output/ADDITIONAL_VALIDATION.md`](cultural_validation/output/ADDITIONAL_VALIDATION.md). The analysis script is [`run_additional_cross_validation.py`](cultural_validation/scripts/run_additional_cross_validation.py).

@@ -51,6 +51,12 @@ sudo apt install fonts-liberation2  # Arial 度量兼容的开源字体
 python3 scripts/plot_nature_style.py
 ```
 
+额外交叉验证使用 Hofstede 官方六维文化矩阵、CC0 EcoCultural Dataset 和 CEPII 共同语言关系。原始外部数据不随仓库重新分发，来源和变量选择见 `output/ADDITIONAL_VALIDATION.md`；准备好外部文件后可运行：
+
+```bash
+python3 scripts/run_additional_cross_validation.py
+```
+
 ## 解释边界
 
 文化距离是国家层级指标，同一国家内的城市文化差异无法识别，因此主分析排除了同国城市对。城市对共享城市与国家，普通逐行显著性会夸大有效样本量；结论以国家标签置换检验为主。结果支持外部关联效度，不单独识别文化影响城市形态的因果方向。
