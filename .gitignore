@@ -5,3 +5,4 @@ cultural_validation/external/
 __pycache__/
 *.pyc
 .venv/
+historical_city_direct_ties_138x138.xlsx
