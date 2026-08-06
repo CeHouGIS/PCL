@@ -130,7 +130,7 @@ def main():
             for label in ax.get_xticklabels() + ax.get_yticklabels():
                 label.set_fontweight("bold")
             if col_index == 0:
-                ax.set_ylabel(f"{subset_name}\nMorphological similarity (CI)")
+                ax.set_ylabel(f"{subset_name}\nCovered Index")
             panel += 1
 
     fig.subplots_adjust(left=0.105, right=0.99, bottom=0.14, top=0.93, hspace=0.38, wspace=0.18)
