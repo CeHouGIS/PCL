@@ -121,7 +121,7 @@ def main():
         for tick in ax.get_xticklabels() + ax.get_yticklabels():
             tick.set_fontweight("bold")
 
-    axes[0].set_ylabel("Morphological similarity (CI)")
+    axes[0].set_ylabel("Covered Index")
     fig.subplots_adjust(left=0.085, right=0.92, bottom=0.22, top=0.88, wspace=0.14)
     cax = fig.add_axes([0.94, 0.25, 0.012, 0.62])
     cb = fig.colorbar(last, cax=cax, ticks=[1, 20, 40, 60])

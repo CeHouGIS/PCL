@@ -83,7 +83,7 @@ def plot_one(dataset, data, results, profiles, cepii):
         ax.set_xlabel("Cultural distance")
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
         for tick in ax.get_xticklabels() + ax.get_yticklabels(): tick.set_fontweight("bold")
-    axes[0].set_ylabel("Morphological similarity (CI)")
+    axes[0].set_ylabel("Covered Index")
     fig.suptitle(dataset, x=.085, ha="left", y=.995, fontsize=9, fontweight="bold")
     fig.subplots_adjust(left=.085, right=.90, bottom=.22, top=.82, wspace=.18)
     cax = fig.add_axes([.92, .25, .012, .55])
