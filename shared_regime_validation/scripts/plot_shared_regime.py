@@ -48,25 +48,18 @@ mpl.rcParams.update({
 })
 
 
-def draw_distribution(ax, groups, colors):
-    violin = ax.violinplot(
-        groups, positions=[1, 2], widths=0.72,
-        showmeans=False, showmedians=False, showextrema=False,
-        bw_method=0.25,
-    )
-    for body, color in zip(violin["bodies"], colors):
-        body.set_facecolor(color)
-        body.set_edgecolor(color)
-        body.set_alpha(0.68)
-        body.set_linewidth(0.7)
-    ax.boxplot(
-        groups, positions=[1, 2], widths=0.22, patch_artist=True,
+def draw_boxplot(ax, groups, colors):
+    boxes = ax.boxplot(
+        groups, positions=[1, 2], widths=0.48, patch_artist=True,
         showfliers=False, whis=(5, 95),
-        medianprops={"color": "white", "linewidth": 1.2},
-        boxprops={"facecolor": "#333333", "edgecolor": "#333333", "linewidth": 0.7},
+        medianprops={"color": "white", "linewidth": 1.4},
+        boxprops={"edgecolor": "#333333", "linewidth": 0.9},
         whiskerprops={"color": "#333333", "linewidth": 0.7},
         capprops={"color": "#333333", "linewidth": 0.7},
     )
+    for box, color in zip(boxes["boxes"], colors):
+        box.set_facecolor(color)
+        box.set_alpha(0.82)
     ax.scatter(
         [1, 2], [group.mean() for group in groups], marker="D", s=11,
         facecolor="white", edgecolor="#111111", linewidth=0.6, zorder=4,
@@ -121,7 +114,7 @@ def main():
                 d.loc[d.shared_regime == 0, "ci_symmetric"].to_numpy(),
                 d.loc[d.shared_regime == 1, "ci_symmetric"].to_numpy(),
             ]
-            draw_distribution(ax, groups, colors)
+            draw_boxplot(ax, groups, colors)
             ax.text(-0.13, 1.055, chr(97 + panel), transform=ax.transAxes,
                     fontsize=9, fontweight="bold", va="bottom", clip_on=False)
             ax.set_title(
