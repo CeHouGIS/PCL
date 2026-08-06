@@ -13,3 +13,14 @@ Only aggregate output and analysis code are committed. Raw inputs, city-level ma
 ```bash
 python3 shared_regime_validation/scripts/calculate_shared_regime_correlation.py
 ```
+
+Generate the Nature-style two-row figure (all pairs and cross-country-only pairs):
+
+```bash
+sudo apt install fonts-liberation2
+python3 shared_regime_validation/scripts/plot_shared_regime.py
+```
+
+The figure is provided as an editable PDF and 600 dpi PNG/TIFF.
+
+![Shared historical regime versus CI](output/shared_regime_vs_ci.png)
