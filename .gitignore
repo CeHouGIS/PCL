@@ -11,3 +11,5 @@ shared_regime_validation/output/city_name_mapping.csv
 shared_regime_validation/output/shared_regime_permutation_nulls.npz
 direct_tie_layer_validation/output/city_name_mapping.csv
 direct_tie_layer_validation/output/direct_tie_permutation_nulls.npz
+cultural_validation/output/additional*
+cultural_validation/output/ADDITIONAL*
