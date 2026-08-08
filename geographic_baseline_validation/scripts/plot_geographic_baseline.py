@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import font_manager
+from matplotlib.ticker import MultipleLocator
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -102,8 +103,12 @@ def main():
             ["<1,000", "1,000–\n5,000", "5,000–\n10,000", "$\\geq$10,000"],
         )
         ax.set_yticks([0.60, 0.70, 0.80, 0.90])
+        ax.yaxis.set_minor_locator(MultipleLocator(0.025))
         ax.set_axisbelow(True)
-        ax.yaxis.grid(True, color="#E6E9EC", linewidth=0.45)
+        ax.yaxis.grid(True, which="major", color="#DCE1E5", linewidth=0.48)
+        ax.yaxis.grid(True, which="minor", color="#EEF0F2", linewidth=0.34)
+        ax.xaxis.grid(True, which="major", color="#F0F2F4", linewidth=0.32)
+        ax.tick_params(axis="y", which="minor", length=1.8, width=0.45)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         for side in ("left", "bottom"):
