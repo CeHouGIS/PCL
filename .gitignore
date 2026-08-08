@@ -1,6 +1,7 @@
 PCL/
 clusters/
 merge/
+feature/
 cultural_validation/external/
 __pycache__/
 *.pyc
@@ -13,3 +14,4 @@ direct_tie_layer_validation/output/city_name_mapping.csv
 direct_tie_layer_validation/output/direct_tie_permutation_nulls.npz
 cultural_validation/output/additional*
 cultural_validation/output/ADDITIONAL*
+cultural_validation/output/permutation_null_k*.npy
