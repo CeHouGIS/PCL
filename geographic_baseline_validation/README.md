@@ -25,7 +25,7 @@ CI_{ij} = \alpha + \beta \log(Distance_{ij}) + \varepsilon_{ij}.
 
 Across all prototype resolutions, geographic distance is negatively associated with CI. The result establishes a stable geographic baseline: cities that are farther apart are, on average, less similar in their physical morphology. It does not imply that geography is the only determinant of CI; subsequent cultural and historical validations test whether meaningful affinities remain beyond this general baseline.
 
-For visualization, city pairs are grouped into four geographic-distance classes: less than 1,000 km, 1,000--5,000 km, 5,000--10,000 km, and at least 10,000 km. The continuous-distance Spearman and QAP statistics remain the inferential results reported above.
+For visualization, city pairs are grouped into seven geographic-distance classes: less than 1,000 km, 1,000--2,500 km, 2,500--5,000 km, 5,000--7,500 km, 7,500--10,000 km, 10,000--15,000 km, and at least 15,000 km. The continuous-distance Spearman and QAP statistics remain the inferential results reported above.
 
 ![CI versus geographic distance](output/ci_vs_geographic_distance_nature.png)
 

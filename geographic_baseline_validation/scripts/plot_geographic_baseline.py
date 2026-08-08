@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import font_manager
-from matplotlib.ticker import MultipleLocator
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -62,8 +61,9 @@ def add_panel_header(ax, panel, k, rho, p_value):
 
 
 def draw_grouped_boxplot(ax, groups, colors):
+    positions = np.arange(1, len(groups) + 1)
     boxes = ax.boxplot(
-        groups, positions=[1, 2, 3, 4], widths=0.52, patch_artist=True,
+        groups, positions=positions, widths=0.58, patch_artist=True,
         showfliers=False, whis=(5, 95),
         medianprops={"color": "white", "linewidth": 1.25},
         boxprops={"edgecolor": "#3B4147", "linewidth": 0.75},
@@ -82,33 +82,33 @@ def main():
     cities = city_table.city.tolist()
     upper = np.triu_indices(len(cities), 1)
     distance_km = haversine_matrix(city_table.longitude, city_table.latitude)[upper]
-    distance_group = np.digitize(distance_km, [1000, 5000, 10000])
+    distance_breaks = [1000, 2500, 5000, 7500, 10000, 15000]
+    distance_group = np.digitize(distance_km, distance_breaks)
 
     fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.45), sharex=True, sharey=True)
-    colors = ["#9DB5CA", "#7899B5", "#577E9E", "#365F7D"]
+    colors = [
+        "#B8C9D8", "#9FB7CB", "#86A5BE", "#6E93B0",
+        "#587F9E", "#456D8B", "#335A77",
+    ]
     for panel, (ax, k) in enumerate(zip(axes, (200, 500, 1000))):
         ci_matrix = symmetric_ci_matrix(ci[ci.k == k], cities)
         ci_values = ci_matrix[upper]
-        groups = [ci_values[distance_group == group] for group in range(4)]
+        groups = [ci_values[distance_group == group] for group in range(7)]
         draw_grouped_boxplot(ax, groups, colors)
 
         row = results.loc[k]
         add_panel_header(
             ax, panel, k, row.spearman_rho, row.spearman_qap_p_one_sided
         )
-        ax.set_xlim(0.52, 4.48)
+        ax.set_xlim(0.48, 7.52)
         ax.set_ylim(0.60, 0.95)
         ax.set_xticks(
-            [1, 2, 3, 4],
-            ["<1,000", "1,000–\n5,000", "5,000–\n10,000", "$\\geq$10,000"],
+            np.arange(1, 8),
+            ["<1", "1–\n2.5", "2.5–\n5", "5–\n7.5", "7.5–\n10", "10–\n15", "$\\geq$15"],
         )
         ax.set_yticks([0.60, 0.70, 0.80, 0.90])
-        ax.yaxis.set_minor_locator(MultipleLocator(0.025))
         ax.set_axisbelow(True)
-        ax.yaxis.grid(True, which="major", color="#DCE1E5", linewidth=0.48)
-        ax.yaxis.grid(True, which="minor", color="#EEF0F2", linewidth=0.34)
-        ax.xaxis.grid(True, which="major", color="#F0F2F4", linewidth=0.32)
-        ax.tick_params(axis="y", which="minor", length=1.8, width=0.45)
+        ax.yaxis.grid(True, color="#E6E9EC", linewidth=0.45)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         for side in ("left", "bottom"):
@@ -119,9 +119,9 @@ def main():
         if panel == 0:
             ax.set_ylabel("Covered Index")
 
-    fig.supxlabel("Geographic distance group (km)",
-                  x=0.495, y=0.035, fontsize=8.5, fontweight="bold")
-    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.25, top=0.80, wspace=0.16)
+    fig.supxlabel("Geographic distance group ($10^3$ km)",
+                  x=0.495, y=0.020, fontsize=8.5, fontweight="bold")
+    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.28, top=0.80, wspace=0.16)
 
     for suffix, dpi in (("pdf", None), ("png", 600), ("tif", 600)):
         fig.savefig(
