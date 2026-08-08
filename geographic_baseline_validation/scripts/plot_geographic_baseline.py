@@ -60,6 +60,20 @@ def add_panel_header(ax, panel, k, rho, p_value):
             color="#4A4F55", va="bottom", clip_on=False)
 
 
+def draw_grouped_boxplot(ax, groups, colors):
+    boxes = ax.boxplot(
+        groups, positions=[1, 2, 3, 4], widths=0.52, patch_artist=True,
+        showfliers=False, whis=(5, 95),
+        medianprops={"color": "white", "linewidth": 1.25},
+        boxprops={"edgecolor": "#3B4147", "linewidth": 0.75},
+        whiskerprops={"color": "#3B4147", "linewidth": 0.70},
+        capprops={"color": "#3B4147", "linewidth": 0.70},
+    )
+    for box, color in zip(boxes["boxes"], colors):
+        box.set_facecolor(color)
+        box.set_alpha(0.78)
+
+
 def main():
     city_table = pd.read_csv(CITY_FILE)
     ci = pd.read_csv(CI_FILE)
@@ -67,34 +81,29 @@ def main():
     cities = city_table.city.tolist()
     upper = np.triu_indices(len(cities), 1)
     distance_km = haversine_matrix(city_table.longitude, city_table.latitude)[upper]
-    log10_distance = np.log10(distance_km)
+    distance_group = np.digitize(distance_km, [1000, 5000, 10000])
 
     fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.45), sharex=True, sharey=True)
-    cmap = mpl.colormaps["cividis"].copy()
-    cmap.set_under("white")
-    last = None
+    colors = ["#9DB5CA", "#7899B5", "#577E9E", "#365F7D"]
     for panel, (ax, k) in enumerate(zip(axes, (200, 500, 1000))):
         ci_matrix = symmetric_ci_matrix(ci[ci.k == k], cities)
         ci_values = ci_matrix[upper]
-        last = ax.hexbin(
-            log10_distance, ci_values, gridsize=34,
-            extent=(1.45, 4.35, 0.60, 0.95), mincnt=1,
-            cmap=cmap, linewidths=0, vmin=1, vmax=75, rasterized=True,
-        )
-        design = np.column_stack([np.ones(len(log10_distance)), log10_distance])
-        beta = np.linalg.lstsq(design, ci_values, rcond=None)[0]
-        x_grid = np.linspace(log10_distance.min(), log10_distance.max(), 200)
-        ax.plot(x_grid, beta[0] + beta[1] * x_grid,
-                color="#C44E52", linewidth=1.35, zorder=4)
+        groups = [ci_values[distance_group == group] for group in range(4)]
+        draw_grouped_boxplot(ax, groups, colors)
 
         row = results.loc[k]
         add_panel_header(
             ax, panel, k, row.spearman_rho, row.spearman_qap_p_one_sided
         )
-        ax.set_xlim(1.45, 4.35)
+        ax.set_xlim(0.52, 4.48)
         ax.set_ylim(0.60, 0.95)
-        ax.set_xticks([2, 3, 4], ["100", "1,000", "10,000"])
+        ax.set_xticks(
+            [1, 2, 3, 4],
+            ["<1,000", "1,000–\n5,000", "5,000–\n10,000", "$\\geq$10,000"],
+        )
         ax.set_yticks([0.60, 0.70, 0.80, 0.90])
+        ax.set_axisbelow(True)
+        ax.yaxis.grid(True, color="#E6E9EC", linewidth=0.45)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         for side in ("left", "bottom"):
@@ -105,16 +114,9 @@ def main():
         if panel == 0:
             ax.set_ylabel("Covered Index")
 
-    fig.supxlabel("Geographic distance (km; log scale)",
+    fig.supxlabel("Geographic distance group (km)",
                   x=0.495, y=0.035, fontsize=8.5, fontweight="bold")
-    fig.subplots_adjust(left=0.080, right=0.91, bottom=0.20, top=0.80, wspace=0.16)
-    color_axis = fig.add_axes([0.93, 0.20, 0.012, 0.60])
-    colorbar = fig.colorbar(last, cax=color_axis, ticks=[1, 25, 50, 75])
-    colorbar.set_label("City-pair count", labelpad=3)
-    colorbar.ax.yaxis.label.set_fontweight("bold")
-    for label in colorbar.ax.get_yticklabels():
-        label.set_fontweight("bold")
-    colorbar.outline.set_linewidth(0.6)
+    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.25, top=0.80, wspace=0.16)
 
     for suffix, dpi in (("pdf", None), ("png", 600), ("tif", 600)):
         fig.savefig(
