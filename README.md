@@ -25,3 +25,5 @@ External source files are not redistributed in this repository. Download them fr
 Aggregate results and code for the shared historical-regime layer are available in [`shared_regime_validation/`](shared_regime_validation/README.md). Raw historical workbooks are not redistributed.
 
 Aggregate results, reproducible code, and a publication figure for the combined direct-tie layer are available in [`direct_tie_layer_validation/`](direct_tie_layer_validation/README.md). The raw historical workbook and pair-level reconstruction files are not redistributed.
+
+The geographic-distance baseline, including Spearman correlations and single-predictor QAP regression across all city pairs, is available in [`geographic_baseline_validation/`](geographic_baseline_validation/README.md).
