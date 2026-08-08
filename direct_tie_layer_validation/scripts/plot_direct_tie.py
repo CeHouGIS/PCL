@@ -33,12 +33,12 @@ mpl.rcParams.update({
     "font.sans-serif": ["Liberation Sans"],
     "font.size": 7,
     "font.weight": "bold",
-    "axes.labelsize": 8,
+    "axes.labelsize": 8.5,
     "axes.labelweight": "bold",
     "axes.titleweight": "bold",
     "axes.linewidth": 0.7,
-    "xtick.labelsize": 7,
-    "ytick.labelsize": 7,
+    "xtick.labelsize": 7.2,
+    "ytick.labelsize": 7.2,
     "xtick.major.size": 3,
     "ytick.major.size": 3,
     "xtick.major.width": 0.7,
@@ -50,20 +50,30 @@ mpl.rcParams.update({
 
 def draw_boxplot(ax, groups, colors):
     boxes = ax.boxplot(
-        groups, positions=[1, 2], widths=0.48, patch_artist=True,
+        groups, positions=[1, 2], widths=0.40, patch_artist=True,
         showfliers=False, whis=(5, 95),
-        medianprops={"color": "white", "linewidth": 1.4},
-        boxprops={"edgecolor": "#333333", "linewidth": 0.9},
-        whiskerprops={"color": "#333333", "linewidth": 0.7},
-        capprops={"color": "#333333", "linewidth": 0.7},
+        medianprops={"color": "white", "linewidth": 1.35},
+        boxprops={"edgecolor": "#3B4147", "linewidth": 0.8},
+        whiskerprops={"color": "#3B4147", "linewidth": 0.75},
+        capprops={"color": "#3B4147", "linewidth": 0.75},
     )
     for box, color in zip(boxes["boxes"], colors):
         box.set_facecolor(color)
-        box.set_alpha(0.82)
+        box.set_alpha(0.70)
 
 
 def format_p(value):
     return "$P_{perm}$ < 0.001" if value < 0.001 else f"$P_{{perm}}$ = {value:.3f}"
+
+
+def add_panel_header(ax, panel, k, p, delta):
+    ax.text(-0.13, 1.125, chr(97 + panel), transform=ax.transAxes,
+            fontsize=9.2, fontweight="bold", va="bottom", clip_on=False)
+    ax.text(0.0, 1.115, f"K = {k}", transform=ax.transAxes,
+            fontsize=8.2, fontweight="bold", va="bottom", clip_on=False)
+    ax.text(0.0, 1.015, f"{format_p(p)}    $\\Delta$CI = {delta:.4f}",
+            transform=ax.transAxes, fontsize=7.0, fontweight="bold",
+            color="#4A4F55", va="bottom", clip_on=False)
 
 
 def main():
@@ -88,8 +98,8 @@ def main():
         for b in historical_names[i + 1:]:
             tie_lookup[tuple(sorted((hist_to_ci[a], hist_to_ci[b])))] = int(tie.loc[a, b])
 
-    colors = ["#4C78A8", "#E45756"]
-    fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.35), sharex=True, sharey=True)
+    colors = ["#527AA3", "#D76565"]
+    fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.45), sharex=True, sharey=True)
     for panel, (ax, k) in enumerate(zip(axes, (200, 500, 1000))):
         d = ci[ci.k == k].copy()
         d["direct_tie"] = [
@@ -102,24 +112,24 @@ def main():
             d.loc[d.direct_tie == 1, "ci_symmetric"].to_numpy(),
         ]
         draw_boxplot(ax, groups, colors)
-        ax.text(-0.13, 1.055, chr(97 + panel), transform=ax.transAxes,
-                fontsize=9, fontweight="bold", va="bottom", clip_on=False)
-        ax.set_title(
-            f"K = {k}    {format_p(p)}    $\\Delta$CI = {delta:.4f}",
-            loc="left", fontsize=7.1, pad=7,
-        )
+        add_panel_header(ax, panel, k, p, delta)
         ax.set_xticks([1, 2], ["No combined\ndirect tie", "Combined\ndirect tie"])
         ax.set_xlim(0.52, 2.48)
-        ax.set_ylim(0.55, 0.97)
-        ax.set_yticks([0.60, 0.70, 0.80, 0.90])
+        ax.set_ylim(0.64, 0.91)
+        ax.set_yticks([0.65, 0.75, 0.85])
+        ax.set_axisbelow(True)
+        ax.yaxis.grid(True, color="#E6E9EC", linewidth=0.45)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        for side in ("left", "bottom"):
+            ax.spines[side].set_color("#30343A")
+            ax.spines[side].set_linewidth(0.75)
         for label in ax.get_xticklabels() + ax.get_yticklabels():
             label.set_fontweight("bold")
         if panel == 0:
             ax.set_ylabel("Covered Index")
 
-    fig.subplots_adjust(left=0.085, right=0.99, bottom=0.22, top=0.88, wspace=0.14)
+    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.24, top=0.80, wspace=0.16)
     for suffix, dpi in (("pdf", None), ("png", 600), ("tif", 600)):
         fig.savefig(OUTPUT / f"direct_tie_vs_ci.{suffix}", dpi=dpi, facecolor="white")
     plt.close(fig)
