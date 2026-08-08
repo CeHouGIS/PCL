@@ -86,7 +86,6 @@ def main():
         raise RuntimeError(f"Expected 130 matched cities, got {len(pairs)}")
     historical_names = [row[0] for row in pairs]
     hist_to_ci = {row[0]: row[1] for row in pairs}
-    ci_country = {row[1]: row[2] for row in pairs}
     regime = regime.loc[historical_names, historical_names]
     regime_lookup = {}
     for i, a in enumerate(historical_names):
@@ -94,46 +93,37 @@ def main():
             regime_lookup[tuple(sorted((hist_to_ci[a], hist_to_ci[b])))] = int(regime.loc[a, b])
 
     colors = ["#4C78A8", "#E45756"]
-    fig, axes = plt.subplots(2, 3, figsize=(7.09, 4.35), sharex=True, sharey=True)
-    panel = 0
-    for row_index, subset_name in enumerate(("All city pairs", "Cross-country pairs")):
-        for col_index, k in enumerate((200, 500, 1000)):
-            ax = axes[row_index, col_index]
-            d = ci[ci.k == k].copy()
-            d["shared_regime"] = [
-                regime_lookup[tuple(sorted((a, b)))] for a, b in zip(d.city_1, d.city_2)
-            ]
-            if row_index == 1:
-                d = d[[ci_country[a] != ci_country[b] for a, b in zip(d.city_1, d.city_2)]]
-                p = results.loc[k, "cross_country_pearson_city_permutation_p_one_sided"]
-                delta = results.loc[k, "cross_country_mean_difference"]
-            else:
-                p = results.loc[k, "pearson_city_permutation_p_one_sided"]
-                delta = results.loc[k, "mean_difference"]
-            groups = [
-                d.loc[d.shared_regime == 0, "ci_symmetric"].to_numpy(),
-                d.loc[d.shared_regime == 1, "ci_symmetric"].to_numpy(),
-            ]
-            draw_boxplot(ax, groups, colors)
-            ax.text(-0.13, 1.055, chr(97 + panel), transform=ax.transAxes,
-                    fontsize=9, fontweight="bold", va="bottom", clip_on=False)
-            ax.set_title(
-                f"K = {k}    {format_p(p)}    $\\Delta$CI = {delta:.4f}",
-                loc="left", fontsize=7.1, pad=7,
-            )
-            ax.set_xticks([1, 2], ["No shared\nregime", "Shared\nregime"])
-            ax.set_xlim(0.52, 2.48)
-            ax.set_ylim(0.55, 0.97)
-            ax.set_yticks([0.60, 0.70, 0.80, 0.90])
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            for label in ax.get_xticklabels() + ax.get_yticklabels():
-                label.set_fontweight("bold")
-            if col_index == 0:
-                ax.set_ylabel(f"{subset_name}\nCovered Index")
-            panel += 1
+    fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.35), sharex=True, sharey=True)
+    for panel, (ax, k) in enumerate(zip(axes, (200, 500, 1000))):
+        d = ci[ci.k == k].copy()
+        d["shared_regime"] = [
+            regime_lookup[tuple(sorted((a, b)))] for a, b in zip(d.city_1, d.city_2)
+        ]
+        p = results.loc[k, "pearson_city_permutation_p_one_sided"]
+        delta = results.loc[k, "mean_difference"]
+        groups = [
+            d.loc[d.shared_regime == 0, "ci_symmetric"].to_numpy(),
+            d.loc[d.shared_regime == 1, "ci_symmetric"].to_numpy(),
+        ]
+        draw_boxplot(ax, groups, colors)
+        ax.text(-0.13, 1.055, chr(97 + panel), transform=ax.transAxes,
+                fontsize=9, fontweight="bold", va="bottom", clip_on=False)
+        ax.set_title(
+            f"K = {k}    {format_p(p)}    $\\Delta$CI = {delta:.4f}",
+            loc="left", fontsize=7.1, pad=7,
+        )
+        ax.set_xticks([1, 2], ["No shared\nregime", "Shared\nregime"])
+        ax.set_xlim(0.52, 2.48)
+        ax.set_ylim(0.55, 0.97)
+        ax.set_yticks([0.60, 0.70, 0.80, 0.90])
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight("bold")
+        if panel == 0:
+            ax.set_ylabel("Covered Index")
 
-    fig.subplots_adjust(left=0.105, right=0.99, bottom=0.14, top=0.93, hspace=0.38, wspace=0.18)
+    fig.subplots_adjust(left=0.085, right=0.99, bottom=0.22, top=0.88, wspace=0.14)
     for suffix, dpi in (("pdf", None), ("png", 600), ("tif", 600)):
         fig.savefig(OUTPUT / f"shared_regime_vs_ci.{suffix}", dpi=dpi, facecolor="white")
     plt.close(fig)
