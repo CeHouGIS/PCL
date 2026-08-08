@@ -60,10 +60,6 @@ def draw_boxplot(ax, groups, colors):
     for box, color in zip(boxes["boxes"], colors):
         box.set_facecolor(color)
         box.set_alpha(0.82)
-    ax.scatter(
-        [1, 2], [group.mean() for group in groups], marker="D", s=11,
-        facecolor="white", edgecolor="#111111", linewidth=0.6, zorder=4,
-    )
 
 
 def format_p(value):
