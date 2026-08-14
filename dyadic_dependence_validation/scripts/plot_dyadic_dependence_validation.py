@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot K=1,000 diagnostics and controlled MRQAP results in Nature style."""
+"""Plot K=1,000 diagnostics and permutation-regression results in Nature style."""
 
 from pathlib import Path
 
@@ -104,9 +104,11 @@ def main():
     )
     fixed_effects = fixed_effects[fixed_effects.k == K].set_index("model")
     controlled = pd.read_csv(
-        OUTPUT / "controlled_historical_mrqap_results.csv"
+        OUTPUT / "city_label_permutation_regression_results.csv"
     )
-    controlled = controlled[controlled.k == K].set_index("historical_predictor")
+    controlled = controlled[
+        (controlled.k == K) & (controlled.predictor == "historical_connection")
+    ].set_index("historical_model")
 
     ci = pairs[f"ci_symmetric_k{K}"].to_numpy()
     distance_breaks = [1000, 2500, 5000, 7500, 10000, 15000]
@@ -193,7 +195,7 @@ def main():
     # d, Historical associations after geographic and national controls.
     predictors = ["direct_tie", "shared_regime"]
     beta_values = controlled.loc[predictors, "standardized_beta"].to_numpy()
-    p_values = controlled.loc[predictors, "mrqap_p_one_sided"].to_numpy()
+    p_values = controlled.loc[predictors, "permutation_p_one_sided"].to_numpy()
     bars = ax_d.bar(
         [0, 1],
         beta_values,
@@ -207,7 +209,7 @@ def main():
         ax_d.text(
             bar.get_x() + bar.get_width() / 2,
             value + 0.004,
-            f"$\\beta={value:.3f}$\n" + p_text(p_value, "P_{\\mathrm{MRQAP}}"),
+            f"$\\beta={value:.3f}$\n" + p_text(p_value),
             ha="center",
             va="bottom",
             linespacing=1.15,

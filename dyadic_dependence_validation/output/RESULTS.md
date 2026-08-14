@@ -22,9 +22,9 @@ The substantial explained variance shows that observations sharing the same sour
 
 ## Controlled historical associations
 
-Each historical layer was tested in a separate double-semi-partialling MRQAP model with log geographic distance and same-country status as covariates.
+Each historical layer was tested in a separate multiple linear regression with log geographic distance and same-country status as covariates. One-sided significance was evaluated using simultaneous row--column city-label permutations.
 
-| Layer | `K` | Standardized `beta` | Adjusted CI difference | One-sided `P_MRQAP` | Model `R^2` |
+| Layer | `K` | Standardized `beta` | Adjusted CI difference | One-sided `P_perm` | Model `R^2` |
 |:---|---:|---:|---:|---:|---:|
 | Direct tie | 200 | 0.0206 | 0.0030 | 0.2902 | 0.1423 |
 | Direct tie | 500 | 0.0329 | 0.0046 | 0.1831 | 0.1450 |
@@ -34,6 +34,8 @@ Each historical layer was tested in a separate double-semi-partialling MRQAP mod
 | Shared regime | 1,000 | 0.0691 | 0.0093 | 0.0122 | 0.1347 |
 
 Shared regime is consistently significant across all three prototype resolutions. Direct tie is consistently positive but does not remain significant after the geographic and national controls.
+
+For the manuscript-ready K=1,000 table, the standardized geographic-distance coefficients are -0.278 in both models (`P_perm < 0.001`), while the same-country coefficients are 0.126 and 0.118 (`P_perm < 0.001`) in the direct-tie and shared-regime models, respectively. The complete coefficient table is provided in `permutation_regression_table_k1000.tex`.
 
 ## Reviewer-ready interpretation
 

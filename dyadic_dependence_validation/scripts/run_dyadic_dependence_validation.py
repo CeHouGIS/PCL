@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnose dyadic dependence and run controlled historical-link MRQAP models."""
+"""Diagnose dyadic dependence and run city-label permutation regressions."""
 
 from pathlib import Path
 import json
@@ -237,81 +237,142 @@ def fixed_effect_results(directed_by_k):
     return pd.DataFrame(rows)
 
 
-def controlled_mrqap(ci_by_k, historical_matrices, log_distance, same_country,
-                     upper, permutations, batch_size=128):
-    controls = np.column_stack(
-        [np.ones(len(log_distance)), zscore(log_distance), zscore(same_country)]
-    )
-    control_inverse = np.linalg.pinv(controls)
+def controlled_permutation_regression(
+        ci_by_k, historical_matrices, log_distance, same_country,
+        upper, permutations, batch_size=128):
+    """Fit standardized regressions with dependence-aware city permutations."""
     rows = []
     for relationship, historical_matrix in historical_matrices.items():
-        predictor = historical_matrix[upper]
-        standardized_predictor = zscore(predictor)
-        residual_predictor = (
-            standardized_predictor - controls @ (control_inverse @ standardized_predictor)
+        raw_predictors = {
+            "historical_connection": historical_matrix[upper],
+            "log_geographic_distance": log_distance,
+            "same_country": same_country,
+        }
+        standardized_predictors = {
+            name: zscore(values) for name, values in raw_predictors.items()
+        }
+        predictor_names = list(standardized_predictors)
+        standardized_design = np.column_stack(
+            [np.ones(len(log_distance))]
+            + [standardized_predictors[name] for name in predictor_names]
         )
-        residual_matrix = pair_matrix(
-            residual_predictor, upper, historical_matrix.shape[0]
+        raw_design = np.column_stack(
+            [np.ones(len(log_distance))]
+            + [raw_predictors[name] for name in predictor_names]
         )
-        residual_denominator = np.dot(residual_predictor, residual_predictor)
 
-        observed = {}
-        beta_null = {k: np.empty(len(permutations), dtype=float) for k in K_VALUES}
+        observed = {k: {} for k in K_VALUES}
         for k in K_VALUES:
             y_raw = ci_by_k[k][upper]
             y = zscore(y_raw)
-            residual_y = y - controls @ (control_inverse @ y)
-            beta = float(np.dot(residual_predictor, residual_y) / residual_denominator)
-            full_design = np.column_stack(
-                [np.ones(len(y)), standardized_predictor,
-                 zscore(log_distance), zscore(same_country)]
-            )
-            coefficients = np.linalg.lstsq(full_design, y, rcond=None)[0]
-            fitted = full_design @ coefficients
+            coefficients = np.linalg.lstsq(standardized_design, y, rcond=None)[0]
+            raw_coefficients = np.linalg.lstsq(raw_design, y_raw, rcond=None)[0]
+            fitted = standardized_design @ coefficients
             r_squared = float(1 - np.sum((y - fitted) ** 2) / np.sum(y ** 2))
-            raw_design = np.column_stack(
-                [np.ones(len(y_raw)), predictor, log_distance, same_country]
-            )
-            raw_beta = float(np.linalg.lstsq(raw_design, y_raw, rcond=None)[0][1])
-            observed[k] = {
-                "residual_y": residual_y,
-                "beta": beta,
-                "raw_beta": raw_beta,
+            observed[k].update({
+                "y": y,
+                "coefficients": coefficients,
+                "raw_coefficients": raw_coefficients,
                 "r_squared": r_squared,
-            }
+            })
 
-        for start in range(0, len(permutations), batch_size):
-            stop = min(start + batch_size, len(permutations))
-            batch = permutations[start:stop]
-            predictor_batch = np.column_stack(
-                [
+        for predictor_index, focal_name in enumerate(predictor_names, start=1):
+            nuisance_names = [name for name in predictor_names if name != focal_name]
+            nuisance = np.column_stack(
+                [np.ones(len(log_distance))]
+                + [standardized_predictors[name] for name in nuisance_names]
+            )
+            nuisance_inverse = np.linalg.pinv(nuisance)
+            focal = standardized_predictors[focal_name]
+            residual_focal = focal - nuisance @ (nuisance_inverse @ focal)
+            residual_matrix = pair_matrix(
+                residual_focal, upper, historical_matrix.shape[0]
+            )
+            denominator = np.dot(residual_focal, residual_focal)
+            null_coefficients = {
+                k: np.empty(len(permutations), dtype=float) for k in K_VALUES
+            }
+            for k in K_VALUES:
+                y = observed[k]["y"]
+                observed[k]["residual_y"] = y - nuisance @ (nuisance_inverse @ y)
+
+            for start in range(0, len(permutations), batch_size):
+                stop = min(start + batch_size, len(permutations))
+                batch = permutations[start:stop]
+                focal_batch = np.column_stack([
                     residual_matrix[np.ix_(permutation, permutation)][upper]
                     for permutation in batch
-                ]
-            )
-            for k in K_VALUES:
-                beta_null[k][start:stop] = (
-                    observed[k]["residual_y"] @ predictor_batch
-                    / residual_denominator
-                )
+                ])
+                for k in K_VALUES:
+                    null_coefficients[k][start:stop] = (
+                        observed[k]["residual_y"] @ focal_batch / denominator
+                    )
 
-        for k in K_VALUES:
-            p_value = float(
-                (1 + np.sum(beta_null[k] >= observed[k]["beta"]))
-                / (len(permutations) + 1)
-            )
-            rows.append({
-                "k": k,
-                "historical_predictor": relationship,
-                "n_city_pairs": len(predictor),
-                "n_connected_pairs": int(predictor.sum()),
-                "standardized_beta": observed[k]["beta"],
-                "unstandardized_adjusted_ci_difference": observed[k]["raw_beta"],
-                "mrqap_p_one_sided": p_value,
-                "model_r_squared": observed[k]["r_squared"],
-                "method": "double-semi-partialling node-label MRQAP",
-            })
+            expected_direction = "negative" if focal_name == "log_geographic_distance" else "positive"
+            for k in K_VALUES:
+                coefficient = float(observed[k]["coefficients"][predictor_index])
+                if expected_direction == "negative":
+                    extreme = np.sum(null_coefficients[k] <= coefficient)
+                else:
+                    extreme = np.sum(null_coefficients[k] >= coefficient)
+                p_value = float((1 + extreme) / (len(permutations) + 1))
+                rows.append({
+                    "k": k,
+                    "historical_model": relationship,
+                    "predictor": focal_name,
+                    "standardized_beta": coefficient,
+                    "unstandardized_coefficient": float(
+                        observed[k]["raw_coefficients"][predictor_index]
+                    ),
+                    "permutation_p_one_sided": p_value,
+                    "expected_direction": expected_direction,
+                    "model_r_squared": observed[k]["r_squared"],
+                    "n_city_pairs": len(log_distance),
+                    "n_permutations": len(permutations),
+                    "method": (
+                        "multiple linear regression with simultaneous "
+                        "row-column city-label permutation inference"
+                    ),
+                })
     return pd.DataFrame(rows)
+
+
+def write_regression_table(regression):
+    selected = regression[regression.k == 1000].set_index(
+        ["historical_model", "predictor"]
+    )
+
+    def coefficient(model, predictor):
+        row = selected.loc[(model, predictor)]
+        p_value = row.permutation_p_one_sided
+        p_text = "<0.001" if p_value < 0.001 else f"{p_value:.3f}"
+        return f"{row.standardized_beta:.3f} $({p_text})$"
+
+    direct_r2 = selected.loc[("direct_tie", "historical_connection")].model_r_squared
+    regime_r2 = selected.loc[("shared_regime", "historical_connection")].model_r_squared
+    table = rf"""\begin{{table}}[!htbp]
+\centering
+\caption{{\textbf{{Associations between historical connections and the Covered Index after controlling for geographic and national dependence.}} Standardized coefficients are reported, with one-sided city-label permutation $P$ values in parentheses. Statistical significance was assessed using 9,999 simultaneous row--column city-label permutations.}}
+\label{{tab:permutation-regression}}
+\begin{{tabular}}{{lcc}}
+\toprule
+Predictor & Direct-tie model & Shared-regime model \\
+\midrule
+Direct tie & {coefficient('direct_tie', 'historical_connection')} & --- \\
+Shared historical regime & --- & {coefficient('shared_regime', 'historical_connection')} \\
+$\log(\mathrm{{Geographic\ distance}})$ & {coefficient('direct_tie', 'log_geographic_distance')} & {coefficient('shared_regime', 'log_geographic_distance')} \\
+Same country & {coefficient('direct_tie', 'same_country')} & {coefficient('shared_regime', 'same_country')} \\
+\midrule
+$R^2$ & {direct_r2:.3f} & {regime_r2:.3f} \\
+City pairs & 8,385 & 8,385 \\
+Permutations & 9,999 & 9,999 \\
+\bottomrule
+\end{{tabular}}
+\end{{table}}
+"""
+    (OUTPUT / "permutation_regression_table_k1000.tex").write_text(
+        table, encoding="utf-8"
+    )
 
 
 def main():
@@ -357,7 +418,7 @@ def main():
         permutations,
     )
     fixed_effects = fixed_effect_results(directed_by_k)
-    controlled = controlled_mrqap(
+    controlled = controlled_permutation_regression(
         symmetric_by_k,
         {"direct_tie": direct_tie_matrix, "shared_regime": shared_regime_matrix},
         np.log(distance_matrix[upper]),
@@ -380,7 +441,10 @@ def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     diagnostics.to_csv(OUTPUT / "dependence_diagnostics_results.csv", index=False)
     fixed_effects.to_csv(OUTPUT / "shared_city_fixed_effects_results.csv", index=False)
-    controlled.to_csv(OUTPUT / "controlled_historical_mrqap_results.csv", index=False)
+    controlled.to_csv(
+        OUTPUT / "city_label_permutation_regression_results.csv", index=False
+    )
+    write_regression_table(controlled)
     pair_table.to_csv(OUTPUT / "dyadic_pair_audit_table.csv", index=False)
     metadata = {
         "objective": (
@@ -395,8 +459,13 @@ def main():
         "permutation": "simultaneous city-row/column label permutation",
         "n_permutations": N_PERMUTATIONS,
         "random_seed": RANDOM_SEED,
-        "mrqap_method": "double-semi-partialling focal-predictor permutation",
-        "mrqap_controls": ["natural-log geographic distance", "same-country status"],
+        "regression_method": (
+            "multiple linear regression with simultaneous row-column "
+            "city-label permutation inference"
+        ),
+        "regression_controls": [
+            "natural-log geographic distance", "same-country status"
+        ],
         "same_country_source": (
             "country field in historical_city_connection_layers_138x138.xlsx / City List"
         ),
@@ -408,7 +477,7 @@ def main():
     print(diagnostics.to_string(index=False))
     print("\nShared-city fixed effects")
     print(fixed_effects.to_string(index=False))
-    print("\nControlled historical MRQAP")
+    print("\nControlled city-label permutation regressions")
     print(controlled.to_string(index=False))
 
 
