@@ -370,7 +370,10 @@ def four_panel_figure():
         & (morphology_results.k == K)
     ].iloc[0]
 
-    fig, axes = plt.subplots(2, 2, figsize=(7.09, 5.05), sharey=True)
+    # Keep each panel close to the aspect ratio of the original standalone
+    # figures. A taller canvas prevents the 2 x 2 layout from flattening the
+    # axes and visually stretching the plotted elements.
+    fig, axes = plt.subplots(2, 2, figsize=(7.09, 6.10), sharey=True)
     ax_a, ax_b, ax_c, ax_d = axes.flat
     binary_colors = ["#527AA3", "#D76565"]
     sequential_colors = [
@@ -476,6 +479,7 @@ def four_panel_figure():
 
     for ax in axes.flat:
         style_box_axis(ax)
+        ax.set_box_aspect(0.76)
         ax.set_ylim(0.60, 0.95)
         ax.set_yticks([0.60, 0.70, 0.80, 0.90])
     ax_a.set_ylabel("Covered Index")
@@ -493,9 +497,9 @@ def four_panel_figure():
     fig.subplots_adjust(
         left=0.085,
         right=0.985,
-        bottom=0.105,
-        top=0.900,
-        hspace=0.49,
+        bottom=0.085,
+        top=0.925,
+        hspace=0.40,
         wspace=0.34,
     )
     save_figure(fig, "combined_external_validation_k1000")
