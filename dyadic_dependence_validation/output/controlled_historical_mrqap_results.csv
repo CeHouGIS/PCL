@@ -1,0 +1,7 @@
+k,historical_predictor,n_city_pairs,n_connected_pairs,standardized_beta,unstandardized_adjusted_ci_difference,mrqap_p_one_sided,model_r_squared,method
+200,direct_tie,8385,1848,0.020638615463746054,0.0029982453581144167,0.2902,0.1422607574463416,double-semi-partialling node-label MRQAP
+500,direct_tie,8385,1848,0.032883969979883396,0.004632993768182585,0.1831,0.14496552281205632,double-semi-partialling node-label MRQAP
+1000,direct_tie,8385,1848,0.03392003725172999,0.00461038020503169,0.173,0.13131734490568514,double-semi-partialling node-label MRQAP
+200,shared_regime,8385,1880,0.059591936664227144,0.00860422504897759,0.0254,0.14519575535761464,double-semi-partialling node-label MRQAP
+500,shared_regime,8385,1880,0.06856339038794773,0.00960079968906249,0.0121,0.1483758368375595,double-semi-partialling node-label MRQAP
+1000,shared_regime,8385,1880,0.06912666356355557,0.009338210686172951,0.0122,0.1347367765109294,double-semi-partialling node-label MRQAP
