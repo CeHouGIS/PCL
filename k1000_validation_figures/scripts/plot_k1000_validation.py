@@ -336,9 +336,175 @@ def combined_figure():
     save_figure(fig, "combined_validation_k1000")
 
 
+def four_panel_figure():
+    """Combine all four external CI validations in a single 2 x 2 figure."""
+    cultural_data = pd.read_csv(CULTURAL_OUTPUT / "analysis_dataset_all_pairs.csv")
+    with open(CULTURAL_OUTPUT / "validation_results.json", encoding="utf-8") as stream:
+        cultural_validation = json.load(stream)
+    cultural_frame = cultural_data[
+        (cultural_data.k == K) & (cultural_data.same_country == 0)
+    ].dropna(subset=["ci_symmetric", "cultdist", "dist"])
+    cultural_rho = stats.spearmanr(
+        cultural_frame.cultdist, cultural_frame.ci_symmetric
+    ).statistic
+    cultural_p = cultural_validation["scales"][str(K)][
+        "country_label_permutation_p"
+    ]
+
+    ci = pd.read_csv(CI_FILE)
+    frame = ci[ci.k == K].copy()
+    ci_cities = sorted(set(ci.city_1) | set(ci.city_2))
+    direct_lookup = historical_status_lookup(ci_cities, "Direct Tie Matrix")
+    regime_lookup = historical_status_lookup(ci_cities, "Shared Regime Matrix")
+    direct_results = pd.read_csv(
+        DIRECT_OUTPUT / "direct_tie_correlation_results.csv"
+    ).set_index("k").loc[K]
+    regime_results = pd.read_csv(
+        REGIME_OUTPUT / "shared_regime_correlation_results.csv"
+    ).set_index("k").loc[K]
+    morphology_results = pd.read_csv(
+        MORPH_OUTPUT / "morphology_concordance_results.csv"
+    )
+    morphology_result = morphology_results[
+        morphology_results.primary_strategy.astype(bool)
+        & (morphology_results.k == K)
+    ].iloc[0]
+
+    fig, axes = plt.subplots(2, 2, figsize=(7.09, 5.05), sharey=True)
+    ax_a, ax_b, ax_c, ax_d = axes.flat
+    binary_colors = ["#527AA3", "#D76565"]
+    sequential_colors = [
+        "#C8D8E5", "#A5C0D3", "#7FA7C1", "#578BAA", "#2F6E91"
+    ]
+
+    # a, Cultural-distance validation.
+    cmap = mpl.colormaps["cividis"].copy()
+    cmap.set_under("white")
+    density = ax_a.hexbin(
+        cultural_frame.cultdist,
+        cultural_frame.ci_symmetric,
+        gridsize=31,
+        extent=(0.28, 0.42, 0.60, 0.95),
+        mincnt=1,
+        cmap=cmap,
+        linewidths=0,
+        vmin=1,
+        vmax=60,
+        rasterized=True,
+    )
+    x = cultural_frame.cultdist.to_numpy(dtype=float)
+    y = cultural_frame.ci_symmetric.to_numpy(dtype=float)
+    design = np.column_stack([np.ones(len(x)), x])
+    beta = np.linalg.lstsq(design, y, rcond=None)[0]
+    x_grid = np.linspace(x.min(), x.max(), 200)
+    grid_design = np.column_stack([np.ones(len(x_grid)), x_grid])
+    y_fit = grid_design @ beta
+    residual = y - design @ beta
+    sigma_squared = residual @ residual / (len(x) - design.shape[1])
+    covariance = sigma_squared * np.linalg.inv(design.T @ design)
+    mean_se = np.sqrt(
+        np.einsum("ij,jk,ik->i", grid_design, covariance, grid_design)
+    )
+    critical = stats.t.ppf(0.975, df=len(x) - design.shape[1])
+    ax_a.fill_between(
+        x_grid,
+        y_fit - critical * mean_se,
+        y_fit + critical * mean_se,
+        color="#C44E52",
+        alpha=0.20,
+        linewidth=0,
+        zorder=3,
+    )
+    ax_a.plot(x_grid, y_fit, color="#C44E52", linewidth=1.3, zorder=4)
+    ax_a.set_xlim(0.28, 0.42)
+    ax_a.set_xticks([0.28, 0.32, 0.36, 0.40])
+    ax_a.set_xlabel("Cultural distance")
+    panel_header(
+        ax_a,
+        "a",
+        "Cultural proximity",
+        f"$r_s$ = {cultural_rho:.3f}    {format_p(cultural_p)}",
+    )
+    color_axis = ax_a.inset_axes([1.025, 0.08, 0.030, 0.76])
+    colorbar = fig.colorbar(density, cax=color_axis, ticks=[1, 20, 40, 60])
+    colorbar.set_label("City-pair count", labelpad=2, fontsize=6.6, fontweight="bold")
+    colorbar.ax.tick_params(labelsize=6.2, width=0.5, length=2)
+    for label in colorbar.ax.get_yticklabels():
+        label.set_fontweight("bold")
+    colorbar.outline.set_linewidth(0.55)
+
+    # b, Direct historical ties.
+    direct = binary_groups(frame, direct_lookup)
+    draw_boxplot(ax_b, direct, binary_colors, [1, 2])
+    ax_b.set_xlim(0.52, 2.48)
+    ax_b.set_xticks([1, 2], ["No direct\ntie", "Direct\ntie"])
+    panel_header(
+        ax_b,
+        "b",
+        "Direct historical tie",
+        f"{format_p(direct_results.pearson_city_permutation_p_one_sided)}"
+        f"    $\\Delta$CI = {direct_results.mean_difference:.3f}",
+    )
+
+    # c, Shared historical regimes.
+    regime = binary_groups(frame, regime_lookup)
+    draw_boxplot(ax_c, regime, binary_colors, [1, 2])
+    ax_c.set_xlim(0.52, 2.48)
+    ax_c.set_xticks([1, 2], ["No shared\nregime", "Shared\nregime"])
+    panel_header(
+        ax_c,
+        "c",
+        "Shared historical regime",
+        f"{format_p(regime_results.pearson_city_permutation_p_one_sided)}"
+        f"    $\\Delta$CI = {regime_results.mean_difference:.3f}",
+    )
+
+    # d, Morphology-based concordance.
+    morphology = morphology_groups(frame)
+    draw_boxplot(ax_d, morphology, sequential_colors, np.arange(1, 6))
+    ax_d.set_xlim(0.52, 5.48)
+    ax_d.set_xticks(
+        np.arange(1, 6), ["Q1\nLow", "Q2", "Q3", "Q4", "Q5\nHigh"]
+    )
+    panel_header(
+        ax_d,
+        "d",
+        "Morphological concordance",
+        f"$r_s$ = {morphology_result.spearman_rho:.3f}    "
+        f"{format_p(morphology_result.spearman_qap_p_one_sided)}",
+    )
+
+    for ax in axes.flat:
+        style_box_axis(ax)
+        ax.set_ylim(0.60, 0.95)
+        ax.set_yticks([0.60, 0.70, 0.80, 0.90])
+    ax_a.set_ylabel("Covered Index")
+    ax_c.set_ylabel("Covered Index")
+    fig.text(
+        0.985,
+        0.975,
+        "K = 1,000",
+        ha="right",
+        va="top",
+        fontsize=7.8,
+        fontweight="bold",
+        color="#30343A",
+    )
+    fig.subplots_adjust(
+        left=0.085,
+        right=0.985,
+        bottom=0.105,
+        top=0.900,
+        hspace=0.49,
+        wspace=0.34,
+    )
+    save_figure(fig, "combined_external_validation_k1000")
+
+
 def main():
     cultural_distance_figure()
     combined_figure()
+    four_panel_figure()
 
 
 if __name__ == "__main__":
