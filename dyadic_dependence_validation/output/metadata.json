@@ -1,0 +1,17 @@
+{
+  "objective": "Diagnose violations of strict i.i.d. assumptions in complete city-pair data and evaluate historical associations with dependence-aware inference.",
+  "n_cities": 130,
+  "n_undirected_pairs": 8385,
+  "n_directed_pairs": 16770,
+  "ci_for_diagnostics": "mean of CI(i->j) and CI(j->i)",
+  "ci_for_fixed_effects": "directed CI(i->j)",
+  "permutation": "simultaneous city-row/column label permutation",
+  "n_permutations": 9999,
+  "random_seed": 20260814,
+  "mrqap_method": "double-semi-partialling focal-predictor permutation",
+  "mrqap_controls": [
+    "natural-log geographic distance",
+    "same-country status"
+  ],
+  "same_country_source": "country field in historical_city_connection_layers_138x138.xlsx / City List"
+}
