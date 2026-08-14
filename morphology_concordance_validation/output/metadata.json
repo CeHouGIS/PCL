@@ -1,0 +1,25 @@
+{
+  "validation_type": "internal cross-representation morphological construct validation",
+  "primary_strategy": "self",
+  "primary_strategy_rationale": "Self-contrast MoCo excludes spatial/temporal positive-pair design and PCL prototype refinement.",
+  "city_distribution": "128 random projections x 99 empirical quantiles",
+  "distance": "approximated sliced-Wasserstein-1 distance",
+  "similarity": "exp(-distance / global median pair distance)",
+  "ci": "symmetric mean of CI(A->B) and CI(B->A)",
+  "mrqap_controls": [
+    "log geographic distance",
+    "same-country indicator",
+    "absolute log MoCo sample-count ratio",
+    "log PCL prototype-count product"
+  ],
+  "permutation": "one-sided simultaneous city-row/column label permutation",
+  "n_permutations": 9999,
+  "random_seed": 20260814,
+  "limitation": "MoCo and PCL use the same imagery and related model family; this is not an independent external morphometric validation.",
+  "sliced_wasserstein_median_scales": {
+    "self": 0.019565584138035774,
+    "temporal": 0.029682790860533714,
+    "spatial": 0.052551865577697754,
+    "spatiotemporal": 0.04753713309764862
+  }
+}
