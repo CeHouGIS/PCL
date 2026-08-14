@@ -8,8 +8,8 @@
   "permutation": "simultaneous city-row/column label permutation",
   "n_permutations": 9999,
   "random_seed": 20260814,
-  "mrqap_method": "double-semi-partialling focal-predictor permutation",
-  "mrqap_controls": [
+  "regression_method": "multiple linear regression with simultaneous row-column city-label permutation inference",
+  "regression_controls": [
     "natural-log geographic distance",
     "same-country status"
   ],
