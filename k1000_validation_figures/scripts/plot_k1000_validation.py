@@ -117,7 +117,7 @@ def cultural_distance_figure():
     ax.text(
         0.0,
         1.075,
-        f"K = 1,000    $r_s$ = {rho:.3f}    {format_p(p_value)}",
+        f"$r_s$ = {rho:.3f}    {format_p(p_value)}",
         transform=ax.transAxes,
         fontsize=7.6,
         fontweight="bold",
@@ -322,16 +322,6 @@ def combined_figure():
     for ax in axes:
         style_box_axis(ax)
     axes[0].set_ylabel("Covered Index")
-    fig.text(
-        0.985,
-        0.955,
-        "K = 1,000",
-        ha="right",
-        va="top",
-        fontsize=7.8,
-        fontweight="bold",
-        color="#30343A",
-    )
     fig.subplots_adjust(left=0.080, right=0.99, bottom=0.24, top=0.78, wspace=0.18)
     save_figure(fig, "combined_validation_k1000")
 
