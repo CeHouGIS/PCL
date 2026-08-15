@@ -53,9 +53,11 @@ mpl.rcParams.update({
 })
 
 
-def format_p(value, subscript="perm"):
-    label = f"P_{{{subscript}}}"
-    return f"${label}$ < 0.001" if value < 0.001 else f"${label}$ = {value:.3f}"
+def format_p(value):
+    if value < 0.001:
+        return "$P$ < 0.001"
+    rounded = np.floor(value * 1000.0 + 0.5) / 1000.0
+    return f"$P$ = {rounded:.3f}"
 
 
 def save_figure(fig, stem):
@@ -65,15 +67,42 @@ def save_figure(fig, stem):
     plt.close(fig)
 
 
+def cultural_spearman_permutation(frame, n_permutations=9999):
+    """Two-sided country-label permutation test for raw Spearman association."""
+    countries = sorted(set(frame.iso3_1) | set(frame.iso3_2))
+    country_index = {country: index for index, country in enumerate(countries)}
+    lookup = np.full((len(countries), len(countries)), np.nan, dtype=float)
+    for row in frame[["iso3_1", "iso3_2", "cultdist"]].drop_duplicates().itertuples(index=False):
+        i = country_index[row.iso3_1]
+        j = country_index[row.iso3_2]
+        lookup[i, j] = lookup[j, i] = row.cultdist
+    first = np.asarray([country_index[country] for country in frame.iso3_1])
+    second = np.asarray([country_index[country] for country in frame.iso3_2])
+    ci_values = frame.ci_symmetric.to_numpy(dtype=float)
+    observed = float(stats.spearmanr(frame.cultdist, ci_values).statistic)
+    rng = np.random.default_rng(20260803)
+    extreme = 0
+    valid = 0
+    for _ in range(n_permutations):
+        permutation = rng.permutation(len(countries))
+        permuted = lookup[permutation[first], permutation[second]]
+        available = np.isfinite(permuted)
+        if available.sum() < 0.8 * len(permuted):
+            continue
+        statistic = stats.spearmanr(
+            permuted[available], ci_values[available]
+        ).statistic
+        extreme += abs(statistic) >= abs(observed)
+        valid += 1
+    return observed, float((1 + extreme) / (1 + valid))
+
+
 def cultural_distance_figure():
     data = pd.read_csv(CULTURAL_OUTPUT / "analysis_dataset_all_pairs.csv")
-    with open(CULTURAL_OUTPUT / "validation_results.json", encoding="utf-8") as stream:
-        validation = json.load(stream)
     frame = data[(data.k == K) & (data.same_country == 0)].dropna(
         subset=["ci_symmetric", "cultdist", "dist"]
     )
-    rho = stats.spearmanr(frame.cultdist, frame.ci_symmetric).statistic
-    p_value = validation["scales"][str(K)]["country_label_permutation_p"]
+    rho, p_value = cultural_spearman_permutation(frame)
 
     fig, ax = plt.subplots(figsize=(3.54, 2.78))
     cmap = mpl.colormaps["cividis"].copy()
@@ -117,7 +146,7 @@ def cultural_distance_figure():
     ax.text(
         0.0,
         1.075,
-        f"K = 1,000    $r_s$ = {rho:.3f}    {format_p(p_value)}",
+        f"$r_s$ = {rho:.3f}    {format_p(p_value)}",
         transform=ax.transAxes,
         fontsize=7.6,
         fontweight="bold",
@@ -262,12 +291,8 @@ def combined_figure():
     frame = ci[ci.k == K].copy()
     ci_cities = sorted(set(ci.city_1) | set(ci.city_2))
     direct_lookup = historical_status_lookup(ci_cities, "Direct Tie Matrix")
-    regime_lookup = historical_status_lookup(ci_cities, "Shared Regime Matrix")
     direct_results = pd.read_csv(
         DIRECT_OUTPUT / "direct_tie_correlation_results.csv"
-    ).set_index("k").loc[K]
-    regime_results = pd.read_csv(
-        REGIME_OUTPUT / "shared_regime_correlation_results.csv"
     ).set_index("k").loc[K]
     morphology_results = pd.read_csv(
         MORPH_OUTPUT / "morphology_concordance_results.csv"
@@ -277,7 +302,7 @@ def combined_figure():
         & (morphology_results.k == K)
     ].iloc[0]
 
-    fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.55), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7.09, 3.10), sharey=True)
     binary_colors = ["#527AA3", "#D76565"]
     sequential_colors = ["#C8D8E5", "#A5C0D3", "#7FA7C1", "#578BAA", "#2F6E91"]
 
@@ -288,51 +313,30 @@ def combined_figure():
     panel_header(
         axes[0],
         "a",
-        "Direct historical tie",
+        "Direct inter-city tie",
         f"{format_p(direct_results.pearson_city_permutation_p_one_sided)}"
         f"    $\\Delta$CI = {direct_results.mean_difference:.3f}",
     )
 
-    regime = binary_groups(frame, regime_lookup)
-    draw_boxplot(axes[1], regime, binary_colors, [1, 2])
-    axes[1].set_xlim(0.52, 2.48)
-    axes[1].set_xticks([1, 2], ["No shared\nregime", "Shared\nregime"])
-    panel_header(
-        axes[1],
-        "b",
-        "Shared historical regime",
-        f"{format_p(regime_results.pearson_city_permutation_p_one_sided)}"
-        f"    $\\Delta$CI = {regime_results.mean_difference:.3f}",
-    )
-
     morphology = morphology_groups(frame)
-    draw_boxplot(axes[2], morphology, sequential_colors, np.arange(1, 6))
-    axes[2].set_xlim(0.52, 5.48)
-    axes[2].set_xticks(
+    draw_boxplot(axes[1], morphology, sequential_colors, np.arange(1, 6))
+    axes[1].set_xlim(0.52, 5.48)
+    axes[1].set_xticks(
         np.arange(1, 6), ["Q1\nLow", "Q2", "Q3", "Q4", "Q5\nHigh"]
     )
     panel_header(
-        axes[2],
-        "c",
+        axes[1],
+        "b",
         "Morphological concordance",
         f"$r_s$ = {morphology_result.spearman_rho:.3f}    "
-        f"{format_p(morphology_result.spearman_qap_p_one_sided, 'QAP')}",
+        f"{format_p(morphology_result.spearman_qap_p_one_sided)}",
     )
 
     for ax in axes:
         style_box_axis(ax)
+        ax.set_box_aspect(0.68)
     axes[0].set_ylabel("Covered Index")
-    fig.text(
-        0.985,
-        0.955,
-        "K = 1,000",
-        ha="right",
-        va="top",
-        fontsize=7.8,
-        fontweight="bold",
-        color="#30343A",
-    )
-    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.24, top=0.78, wspace=0.18)
+    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.20, top=0.80, wspace=0.22)
     save_figure(fig, "combined_validation_k1000")
 
 

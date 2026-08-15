@@ -3,7 +3,7 @@
 This directory provides publication-ready figures restricted to the final prototype resolution, $K=1{,}000$:
 
 - `ci_vs_cultural_distance_nature_k1000`: standalone cultural-distance validation;
-- `combined_validation_k1000`: combined panels for direct historical ties, shared historical regimes and internal morphology concordance.
+- `combined_validation_k1000`: combined panels for direct inter-city ties and internal morphology concordance.
 - `combined_external_validation_k1000`: a unified $2\times2$ figure containing cultural distance, direct historical ties, shared historical regimes and morphology-based concordance.
 
 The plotting script reads the existing analysis and result tables, so all statistics match the previously reported full-resolution analyses. It does not overwrite the original three-resolution figures.
