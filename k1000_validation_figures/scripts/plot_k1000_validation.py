@@ -54,7 +54,10 @@ mpl.rcParams.update({
 
 
 def format_p(value):
-    return "$P$ < 0.001" if value < 0.001 else f"$P$ = {value:.3f}"
+    if value < 0.001:
+        return "$P$ < 0.001"
+    rounded = np.floor(value * 1000.0 + 0.5) / 1000.0
+    return f"$P$ = {rounded:.3f}"
 
 
 def save_figure(fig, stem):
@@ -64,14 +67,42 @@ def save_figure(fig, stem):
     plt.close(fig)
 
 
+def cultural_spearman_permutation(frame, n_permutations=9999):
+    """Two-sided country-label permutation test for raw Spearman association."""
+    countries = sorted(set(frame.iso3_1) | set(frame.iso3_2))
+    country_index = {country: index for index, country in enumerate(countries)}
+    lookup = np.full((len(countries), len(countries)), np.nan, dtype=float)
+    for row in frame[["iso3_1", "iso3_2", "cultdist"]].drop_duplicates().itertuples(index=False):
+        i = country_index[row.iso3_1]
+        j = country_index[row.iso3_2]
+        lookup[i, j] = lookup[j, i] = row.cultdist
+    first = np.asarray([country_index[country] for country in frame.iso3_1])
+    second = np.asarray([country_index[country] for country in frame.iso3_2])
+    ci_values = frame.ci_symmetric.to_numpy(dtype=float)
+    observed = float(stats.spearmanr(frame.cultdist, ci_values).statistic)
+    rng = np.random.default_rng(20260803)
+    extreme = 0
+    valid = 0
+    for _ in range(n_permutations):
+        permutation = rng.permutation(len(countries))
+        permuted = lookup[permutation[first], permutation[second]]
+        available = np.isfinite(permuted)
+        if available.sum() < 0.8 * len(permuted):
+            continue
+        statistic = stats.spearmanr(
+            permuted[available], ci_values[available]
+        ).statistic
+        extreme += abs(statistic) >= abs(observed)
+        valid += 1
+    return observed, float((1 + extreme) / (1 + valid))
+
+
 def cultural_distance_figure():
     data = pd.read_csv(CULTURAL_OUTPUT / "analysis_dataset_all_pairs.csv")
-    with open(CULTURAL_OUTPUT / "validation_results.json", encoding="utf-8") as stream:
-        validation = json.load(stream)
     frame = data[(data.k == K) & (data.same_country == 0)].dropna(
         subset=["ci_symmetric", "cultdist", "dist"]
     )
-    p_value = validation["scales"][str(K)]["country_label_permutation_p"]
+    rho, p_value = cultural_spearman_permutation(frame)
 
     fig, ax = plt.subplots(figsize=(3.54, 2.78))
     cmap = mpl.colormaps["cividis"].copy()
@@ -97,7 +128,6 @@ def cultural_distance_figure():
     grid_design = np.column_stack([np.ones(len(x_grid)), x_grid])
     y_fit = grid_design @ beta
     residual = y - design @ beta
-    r_squared = 1.0 - (residual @ residual) / np.sum((y - y.mean()) ** 2)
     sigma_squared = residual @ residual / (len(x) - design.shape[1])
     covariance = sigma_squared * np.linalg.inv(design.T @ design)
     mean_se = np.sqrt(np.einsum("ij,jk,ik->i", grid_design, covariance, grid_design))
@@ -116,7 +146,7 @@ def cultural_distance_figure():
     ax.text(
         0.0,
         1.075,
-        f"$R^2$ = {r_squared:.3f}    {format_p(p_value)}",
+        f"$r_s$ = {rho:.3f}    {format_p(p_value)}",
         transform=ax.transAxes,
         fontsize=7.6,
         fontweight="bold",
@@ -188,21 +218,6 @@ def morphology_groups(frame):
     )
     quintile = pairs.primary_similarity_quintile.to_numpy(dtype=int)
     return [values[quintile == group] for group in range(1, 6)]
-
-
-def morphology_r_squared(frame):
-    pairs = pd.read_csv(MORPH_OUTPUT / "moco_morphology_similarity_pairs.csv")
-    lookup = {}
-    for row in frame.itertuples(index=False):
-        lookup[(row.city_1, row.city_2)] = row.ci_symmetric
-        lookup[(row.city_2, row.city_1)] = row.ci_symmetric
-    ci_values = np.asarray(
-        [lookup[(a, b)] for a, b in zip(pairs.city_1, pairs.city_2)], dtype=float
-    )
-    correlation = stats.pearsonr(
-        pairs.self_similarity.to_numpy(dtype=float), ci_values
-    ).statistic
-    return float(correlation ** 2)
 
 
 def draw_boxplot(ax, groups, colors, positions):
@@ -304,7 +319,6 @@ def combined_figure():
     )
 
     morphology = morphology_groups(frame)
-    morphology_r2 = morphology_r_squared(frame)
     draw_boxplot(axes[1], morphology, sequential_colors, np.arange(1, 6))
     axes[1].set_xlim(0.52, 5.48)
     axes[1].set_xticks(
@@ -314,7 +328,7 @@ def combined_figure():
         axes[1],
         "b",
         "Morphological concordance",
-        f"$R^2$ = {morphology_r2:.3f}    "
+        f"$r_s$ = {morphology_result.spearman_rho:.3f}    "
         f"{format_p(morphology_result.spearman_qap_p_one_sided)}",
     )
 
