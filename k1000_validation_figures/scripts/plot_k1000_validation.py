@@ -53,9 +53,8 @@ mpl.rcParams.update({
 })
 
 
-def format_p(value, subscript="perm"):
-    label = f"P_{{{subscript}}}"
-    return f"${label}$ < 0.001" if value < 0.001 else f"${label}$ = {value:.3f}"
+def format_p(value):
+    return "$P$ < 0.001" if value < 0.001 else f"$P$ = {value:.3f}"
 
 
 def save_figure(fig, stem):
@@ -72,7 +71,6 @@ def cultural_distance_figure():
     frame = data[(data.k == K) & (data.same_country == 0)].dropna(
         subset=["ci_symmetric", "cultdist", "dist"]
     )
-    rho = stats.spearmanr(frame.cultdist, frame.ci_symmetric).statistic
     p_value = validation["scales"][str(K)]["country_label_permutation_p"]
 
     fig, ax = plt.subplots(figsize=(3.54, 2.78))
@@ -99,6 +97,7 @@ def cultural_distance_figure():
     grid_design = np.column_stack([np.ones(len(x_grid)), x_grid])
     y_fit = grid_design @ beta
     residual = y - design @ beta
+    r_squared = 1.0 - (residual @ residual) / np.sum((y - y.mean()) ** 2)
     sigma_squared = residual @ residual / (len(x) - design.shape[1])
     covariance = sigma_squared * np.linalg.inv(design.T @ design)
     mean_se = np.sqrt(np.einsum("ij,jk,ik->i", grid_design, covariance, grid_design))
@@ -117,7 +116,7 @@ def cultural_distance_figure():
     ax.text(
         0.0,
         1.075,
-        f"$r_s$ = {rho:.3f}    {format_p(p_value)}",
+        f"$R^2$ = {r_squared:.3f}    {format_p(p_value)}",
         transform=ax.transAxes,
         fontsize=7.6,
         fontweight="bold",
@@ -191,6 +190,21 @@ def morphology_groups(frame):
     return [values[quintile == group] for group in range(1, 6)]
 
 
+def morphology_r_squared(frame):
+    pairs = pd.read_csv(MORPH_OUTPUT / "moco_morphology_similarity_pairs.csv")
+    lookup = {}
+    for row in frame.itertuples(index=False):
+        lookup[(row.city_1, row.city_2)] = row.ci_symmetric
+        lookup[(row.city_2, row.city_1)] = row.ci_symmetric
+    ci_values = np.asarray(
+        [lookup[(a, b)] for a, b in zip(pairs.city_1, pairs.city_2)], dtype=float
+    )
+    correlation = stats.pearsonr(
+        pairs.self_similarity.to_numpy(dtype=float), ci_values
+    ).statistic
+    return float(correlation ** 2)
+
+
 def draw_boxplot(ax, groups, colors, positions):
     boxes = ax.boxplot(
         groups,
@@ -262,12 +276,8 @@ def combined_figure():
     frame = ci[ci.k == K].copy()
     ci_cities = sorted(set(ci.city_1) | set(ci.city_2))
     direct_lookup = historical_status_lookup(ci_cities, "Direct Tie Matrix")
-    regime_lookup = historical_status_lookup(ci_cities, "Shared Regime Matrix")
     direct_results = pd.read_csv(
         DIRECT_OUTPUT / "direct_tie_correlation_results.csv"
-    ).set_index("k").loc[K]
-    regime_results = pd.read_csv(
-        REGIME_OUTPUT / "shared_regime_correlation_results.csv"
     ).set_index("k").loc[K]
     morphology_results = pd.read_csv(
         MORPH_OUTPUT / "morphology_concordance_results.csv"
@@ -277,7 +287,7 @@ def combined_figure():
         & (morphology_results.k == K)
     ].iloc[0]
 
-    fig, axes = plt.subplots(1, 3, figsize=(7.09, 2.55), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7.09, 3.10), sharey=True)
     binary_colors = ["#527AA3", "#D76565"]
     sequential_colors = ["#C8D8E5", "#A5C0D3", "#7FA7C1", "#578BAA", "#2F6E91"]
 
@@ -288,41 +298,31 @@ def combined_figure():
     panel_header(
         axes[0],
         "a",
-        "Direct historical tie",
+        "Direct inter-city tie",
         f"{format_p(direct_results.pearson_city_permutation_p_one_sided)}"
         f"    $\\Delta$CI = {direct_results.mean_difference:.3f}",
     )
 
-    regime = binary_groups(frame, regime_lookup)
-    draw_boxplot(axes[1], regime, binary_colors, [1, 2])
-    axes[1].set_xlim(0.52, 2.48)
-    axes[1].set_xticks([1, 2], ["No shared\nregime", "Shared\nregime"])
-    panel_header(
-        axes[1],
-        "b",
-        "Shared historical regime",
-        f"{format_p(regime_results.pearson_city_permutation_p_one_sided)}"
-        f"    $\\Delta$CI = {regime_results.mean_difference:.3f}",
-    )
-
     morphology = morphology_groups(frame)
-    draw_boxplot(axes[2], morphology, sequential_colors, np.arange(1, 6))
-    axes[2].set_xlim(0.52, 5.48)
-    axes[2].set_xticks(
+    morphology_r2 = morphology_r_squared(frame)
+    draw_boxplot(axes[1], morphology, sequential_colors, np.arange(1, 6))
+    axes[1].set_xlim(0.52, 5.48)
+    axes[1].set_xticks(
         np.arange(1, 6), ["Q1\nLow", "Q2", "Q3", "Q4", "Q5\nHigh"]
     )
     panel_header(
-        axes[2],
-        "c",
+        axes[1],
+        "b",
         "Morphological concordance",
-        f"$r_s$ = {morphology_result.spearman_rho:.3f}    "
-        f"{format_p(morphology_result.spearman_qap_p_one_sided, 'QAP')}",
+        f"$R^2$ = {morphology_r2:.3f}    "
+        f"{format_p(morphology_result.spearman_qap_p_one_sided)}",
     )
 
     for ax in axes:
         style_box_axis(ax)
+        ax.set_box_aspect(0.68)
     axes[0].set_ylabel("Covered Index")
-    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.24, top=0.78, wspace=0.18)
+    fig.subplots_adjust(left=0.080, right=0.99, bottom=0.20, top=0.80, wspace=0.22)
     save_figure(fig, "combined_validation_k1000")
 
 
