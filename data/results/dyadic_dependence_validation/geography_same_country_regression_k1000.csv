@@ -1,0 +1,3 @@
+k,predictor,standardized_beta,unstandardized_coefficient,permutation_p_one_sided,expected_direction,model_r_squared,adjusted_r_squared,n_cities,n_city_pairs,n_permutations,method
+1000,log_geographic_distance,-0.2769028230320596,-0.01704374151770134,0.0001,negative,0.12958738163174643,0.1293796954904035,130,8385,9999,multiple regression with simultaneous row-column city-label permutation inference
+1000,same_country,0.13389903075483622,0.05205021591285479,0.0001,positive,0.12958738163174643,0.1293796954904035,130,8385,9999,multiple regression with simultaneous row-column city-label permutation inference

@@ -1,0 +1,8 @@
+{
+  "distance_definition": "Great-circle distance between city raster centroids (km)",
+  "model": "symmetric CI_ij ~ natural log(great-circle distance_ij)",
+  "inference": "one-sided negative-tail node-label QAP permutation",
+  "permutations": 9999,
+  "random_seed": 20260808,
+  "diagonal_excluded": true
+}

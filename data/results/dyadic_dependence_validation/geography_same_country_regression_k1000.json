@@ -1,0 +1,14 @@
+{
+  "model": "CI ~ log(geographic distance) + same-country status",
+  "historical_connection_included": false,
+  "ci": "symmetric Covered Index",
+  "prototype_resolution": 1000,
+  "n_cities": 130,
+  "n_city_pairs": 8385,
+  "permutation": "simultaneous row-column city-label permutation",
+  "tests": "one-sided in preregistered directions",
+  "n_permutations": 9999,
+  "random_seed": 20260814,
+  "r_squared": 0.12958738163174643,
+  "adjusted_r_squared": 0.1293796954904035
+}
