@@ -2,6 +2,13 @@
 
 This repository contains the PCL prototype features used for the study of urban morphological similarity, together with an external validation against WVS/EVS cultural distance.
 
+## File classification
+
+See [`FILE_CLASSIFICATION.md`](FILE_CLASSIFICATION.md) for a Chinese index that
+classifies the repository's source code, raw and derived data, raster datasets,
+result figures, documentation, archives, and temporary files without changing
+the paths required by the analysis scripts.
+
 ## Data
 
 The original archive is stored at `data/PCL.tar.gz` (18.9 MB). Extract it at the repository root before rerunning the validation:
